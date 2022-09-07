@@ -7,20 +7,7 @@
 #
 ################################################################################
 # \copyright
-# Copyright 2018-2020 Cypress Semiconductor Corporation
-# SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# $ Copyright 2021-2022 Cypress Semiconductor Apache2 $
 ################################################################################
 
 
@@ -92,7 +79,7 @@ SOURCES=
 
 # Like SOURCES, but for include directories. Value should be paths to
 # directories (without a leading -I).
-INCLUDES=./configs
+INCLUDES=
 
 # Add additional defines to the build process (without a leading -D).
 DEFINES=CY_RETARGET_IO_CONVERT_LF_TO_CRLF CY_RTOS_AWARE
@@ -104,7 +91,11 @@ VFP_SELECT=
 #
 # NOTE: Includes and defines should use the INCLUDES and DEFINES variable
 # above.
+ifeq ($(TOOLCHAIN),IAR)
+CFLAGS=--dlib_config=full
+else
 CFLAGS=
+endif
 
 # Additional / custom C++ compiler flags.
 #
@@ -119,7 +110,11 @@ CXXFLAGS=
 ASFLAGS=
 
 # Additional / custom linker flags.
+ifeq ($(TOOLCHAIN),IAR)
+LDFLAGS=--threaded_lib
+else
 LDFLAGS=
+endif
 
 # Additional / custom libraries to link in to the application.
 LDLIBS=
@@ -133,7 +128,6 @@ PREBUILD=
 # Custom post-build commands to run.
 POSTBUILD=
 
-
 ################################################################################
 # Paths
 ################################################################################
@@ -145,9 +139,9 @@ CY_APP_PATH=
 
 # Relative path to the shared repo location.
 #
-# All .mtb files have the format, <URI>#<COMMIT>#<LOCATION>. If the <LOCATION> field 
-# begins with $$ASSET_REPO$$, then the repo is deposited in the path specified by 
-# the CY_GETLIBS_SHARED_PATH variable. The default location is one directory level 
+# All .mtb files have the format, <URI>#<COMMIT>#<LOCATION>. If the <LOCATION> field
+# begins with $$ASSET_REPO$$, then the repo is deposited in the path specified by
+# the CY_GETLIBS_SHARED_PATH variable. The default location is one directory level
 # above the current app directory.
 # This is used with CY_GETLIBS_SHARED_NAME variable, which specifies the directory name.
 CY_GETLIBS_SHARED_PATH=../

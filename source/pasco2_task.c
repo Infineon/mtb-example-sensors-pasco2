@@ -37,25 +37,39 @@
 /* Header file for local task */
 #include "xensiv_dps3xx_mtb.h"
 
+#if defined(TARGET_CYSBSYSKIT_DEV_01)
 /* Output pin for sensor PSEL line */
 #define MTB_PASCO2_PSEL (P5_3)
-/* Pin state to enable I2C channel of sensor */
-#define MTB_PASCO2_PSEL_I2C_ENABLE (0U)
 /* Output pin for PAS CO2 Wing Board power switch */
 #define MTB_PASCO2_POWER_SWITCH (P10_5)
-/* Pin state to enable power to sensor on PAS CO2 Wing Board*/
-#define MTB_PASCO2_POWER_ON (1U)
-
 /* Output pin for PAS CO2 Wing Board LED OK */
 #define MTB_PASCO2_LED_OK (P9_0)
 /* Output pin for PAS CO2 Wing Board LED WARNING  */
 #define MTB_PASCO2_LED_WARNING (P9_1)
 
+#elif defined(TARGET_CY8CKIT_149)
+
+/* Output pin for sensor PSEL line */
+#define MTB_PASCO2_PSEL (P5_2)
+/* Output pin for PAS CO2 Wing Board power switch */
+#define MTB_PASCO2_POWER_SWITCH (P5_3)
+/* Output pin for PAS CO2 Wing Board LED OK */
+#define MTB_PASCO2_LED_OK (P5_0)
+/* Output pin for PAS CO2 Wing Board LED WARNING  */
+#define MTB_PASCO2_LED_WARNING (P5_1)
+
+#else
+#error "Board not supported"
+#endif
+
+/* Pin state to enable I2C channel of sensor */
+#define MTB_PASCO2_PSEL_I2C_ENABLE (0U)
+/* Pin state to enable power to sensor on PAS CO2 Wing Board*/
+#define MTB_PASCO2_POWER_ON (1U)
 /* Pin state for PAS CO2 Wing Board LED off. */
 #define MTB_PASCO_LED_STATE_OFF (0U)
 /* Pin state for PAS CO2 Wing Board LED on. */
 #define MTB_PASCO_LED_STATE_ON (1U)
-
 /* I2C bus frequency */
 #define I2C_MASTER_FREQUENCY (100000U)
 
@@ -213,8 +227,8 @@ void pasco2_task(cy_thread_arg_t arg)
     /* Configure PAS CO2 Wing board interrupt to enable 12V boost converter in wingboard */
     xensiv_pasco2_interrupt_config_t int_config =
     {
-        .b.int_func = XENSIV_PASCO2_INTERRUPT_FUNCTION_EARLY,
-        .b.int_typ = (uint32_t)XENSIV_PASCO2_INTERRUPT_TYPE_HIGH_ACTIVE
+        .b.int_func = XENSIV_PASCO2_INTERRUPT_FUNCTION_NONE,
+        .b.int_typ = (uint32_t)XENSIV_PASCO2_INTERRUPT_TYPE_LOW_ACTIVE
     };
 
     result = xensiv_pasco2_set_interrupt_config(&xensiv_pasco2, int_config);

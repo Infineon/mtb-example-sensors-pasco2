@@ -162,78 +162,82 @@ void pasco2_terminal_ui_task(cy_thread_arg_t arg)
     char value[IFX_PASCO2_VALUE_MAXLENGTH];
     uint8_t rx_value = 0;
 
-    /* Check if a key was pressed */
-    while (cyhal_uart_getc(&cy_retarget_io_uart_obj, &rx_value, 0) == CY_RSLT_SUCCESS)
+    for (;;)
     {
-        pasco2_display_ppm(false);
-
-        switch ((char)rx_value)
+        /* Check if a key was pressed */
+        if (cyhal_uart_getc(&cy_retarget_io_uart_obj, &rx_value, 0) == CY_RSLT_SUCCESS)
         {
-            // menu
-            case '?':
-                terminal_ui_menu();
-                break;
-            // measurement period
-            case 'p':
+            pasco2_display_ppm(false);
+
+            switch ((char)rx_value)
             {
-                printf("Enter the measurement period [5-4095]s\r\n");
-                terminal_ui_readline(&cy_retarget_io_uart_obj, value, IFX_PASCO2_VALUE_MAXLENGTH);
-
-                char *end;
-                const uint16_t measurement_period = (uint16_t)strtol(value, &end, 10);
-                if (value != end)
+                // menu
+                case '?':
+                    terminal_ui_menu();
+                    break;
+                
+                // measurement period
+                case 'p':
                 {
-                    if ((measurement_period < XENSIV_PASCO2_MEAS_RATE_MIN) || (measurement_period > XENSIV_PASCO2_MEAS_RATE_MAX))
+                    printf("Enter the measurement period [5-4095]s\r\n");
+                    terminal_ui_readline(&cy_retarget_io_uart_obj, value, IFX_PASCO2_VALUE_MAXLENGTH);
+
+                    char *end;
+                    const uint16_t measurement_period = (uint16_t)strtol(value, &end, 10);
+                    if (value != end)
                     {
-                        printf("CO2 sensor measurement period configuration error, Valid range is [5-4095]s\r\n\r\n");
-                    }
-                    else
-                    {
-                        xensiv_pasco2_measurement_config_t meas_config = {
-                            .b.op_mode = XENSIV_PASCO2_OP_MODE_IDLE,
-                            .b.boc_cfg = XENSIV_PASCO2_BOC_CFG_AUTOMATIC
-                        };
-                        int32_t status = xensiv_pasco2_set_measurement_config(&xensiv_pasco2, meas_config);
-
-                        status |= xensiv_pasco2_set_measurement_rate(&xensiv_pasco2, measurement_period);
-
-                        meas_config = (xensiv_pasco2_measurement_config_t){
-                            .b.op_mode = XENSIV_PASCO2_OP_MODE_CONTINUOUS,
-                            .b.boc_cfg = XENSIV_PASCO2_BOC_CFG_AUTOMATIC
-                        };
-                        status |= xensiv_pasco2_set_measurement_config(&xensiv_pasco2, meas_config);
-
-                        if (status == CY_RSLT_SUCCESS)
+                        if ((measurement_period < XENSIV_PASCO2_MEAS_RATE_MIN) || (measurement_period > XENSIV_PASCO2_MEAS_RATE_MAX))
                         {
-                            printf("CO2 measurement period set to: %d\r\n\r\n", measurement_period);
+                            printf("CO2 sensor measurement period configuration error, Valid range is [5-4095]s\r\n\r\n");
                         }
                         else
                         {
-                            printf("An unexpected error occurred while trying to change the measurement period\r\n\r\n");
+                            xensiv_pasco2_measurement_config_t meas_config = {
+                                .b.op_mode = XENSIV_PASCO2_OP_MODE_IDLE,
+                                .b.boc_cfg = XENSIV_PASCO2_BOC_CFG_AUTOMATIC
+                            };
+                            int32_t status = xensiv_pasco2_set_measurement_config(&xensiv_pasco2, meas_config);
+
+                            status |= xensiv_pasco2_set_measurement_rate(&xensiv_pasco2, measurement_period);
+
+                            meas_config = (xensiv_pasco2_measurement_config_t){
+                                .b.op_mode = XENSIV_PASCO2_OP_MODE_CONTINUOUS,
+                                .b.boc_cfg = XENSIV_PASCO2_BOC_CFG_AUTOMATIC
+                            };
+                            status |= xensiv_pasco2_set_measurement_config(&xensiv_pasco2, meas_config);
+
+                            if (status == CY_RSLT_SUCCESS)
+                            {
+                                printf("CO2 measurement period set to: %d\r\n\r\n", measurement_period);
+                            }
+                            else
+                            {
+                                printf("An unexpected error occurred while trying to change the measurement period\r\n\r\n");
+                            }
                         }
                     }
+                    break;
                 }
-                break;
+                
+                case 'i':
+                    printf("Display additional diagnostic information [y/n]?\r\n");
+                    terminal_ui_readline(&cy_retarget_io_uart_obj, value, IFX_PASCO2_VALUE_MAXLENGTH);
+                    if (strlen(value) != 1 || (value[0] != 'y' && value[0] != 'n'))
+                    {
+                        printf("Input error, valid values are [y/n]\r\n\r\n");
+                        continue;
+                    }
+                    pasco2_enable_internal_logging(value[0] == 'y');
+                    break;
+                
+                default:
+                    terminal_ui_info();
+                    break;
             }
-            case 'i':
-                printf("Display additional diagnostic information [y/n]?\r\n");
-                terminal_ui_readline(&cy_retarget_io_uart_obj, value, IFX_PASCO2_VALUE_MAXLENGTH);
-                if (strlen(value) != 1 || (value[0] != 'y' && value[0] != 'n'))
-                {
-                    printf("Input error, valid values are [y/n]\r\n\r\n");
-                    continue;
-                }
-                pasco2_enable_internal_logging(value[0] == 'y');
-                break;
-            default:
-                terminal_ui_info();
-        }
-        pasco2_display_ppm(true);
-    }
 
-    printf("Exiting terminal ui\r\n");
-    // exit current thread (suspend)
-    cy_rtos_exit_thread();
+            pasco2_display_ppm(true);
+        }
+    }
 }
 
 /* [] END OF FILE */
