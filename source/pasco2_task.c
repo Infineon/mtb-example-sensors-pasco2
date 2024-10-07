@@ -37,7 +37,7 @@
 /* Header file for local task */
 #include "xensiv_dps3xx_mtb.h"
 
-#if defined(TARGET_CYSBSYSKIT_DEV_01)
+#if defined(CYSBSYSKIT_DEV_01)
 /* Output pin for sensor PSEL line */
 #define MTB_PASCO2_PSEL (P5_3)
 /* Output pin for PAS CO2 Wing Board power switch */
@@ -46,22 +46,6 @@
 #define MTB_PASCO2_LED_OK (P9_0)
 /* Output pin for PAS CO2 Wing Board LED WARNING  */
 #define MTB_PASCO2_LED_WARNING (P9_1)
-
-#elif defined(TARGET_CY8CKIT_149)
-
-/* Output pin for sensor PSEL line */
-#define MTB_PASCO2_PSEL (P5_2)
-/* Output pin for PAS CO2 Wing Board power switch */
-#define MTB_PASCO2_POWER_SWITCH (P5_3)
-/* Output pin for PAS CO2 Wing Board LED OK */
-#define MTB_PASCO2_LED_OK (P5_0)
-/* Output pin for PAS CO2 Wing Board LED WARNING  */
-#define MTB_PASCO2_LED_WARNING (P5_1)
-
-#else
-#error "Board not supported"
-#endif
-
 /* Pin state to enable I2C channel of sensor */
 #define MTB_PASCO2_PSEL_I2C_ENABLE (0U)
 /* Pin state to enable power to sensor on PAS CO2 Wing Board*/
@@ -70,6 +54,17 @@
 #define MTB_PASCO_LED_STATE_OFF (0U)
 /* Pin state for PAS CO2 Wing Board LED on. */
 #define MTB_PASCO_LED_STATE_ON (1U)
+
+#else
+#define MTB_PASCO2_LED_WARNING  (CYBSP_USER_LED)
+#define MTB_PASCO2_LED_OK       (CYBSP_USER_LED2)
+#define PASCO2_PWR_EN_ALT       (CYBSP_A3)
+/* Pin state for PSoC 62 baseboard LED off. */
+#define MTB_PASCO_LED_STATE_OFF (1U)
+/* Pin state for PSoC 62 baseboard LED on. */
+#define MTB_PASCO_LED_STATE_ON (0U)
+#endif
+
 /* I2C bus frequency */
 #define I2C_MASTER_FREQUENCY (100000U)
 
@@ -94,7 +89,6 @@ xensiv_pasco2_t xensiv_pasco2;
 
 static volatile bool log_internal = false;
 static volatile bool display_ppm = true;
-
 extern cyhal_timer_t led_blink_timer;
 
 /*******************************************************************************
@@ -179,6 +173,7 @@ void pasco2_task(cy_thread_arg_t arg)
         CY_ASSERT(0);
     }
 
+#if defined(CYSBSYSKIT_DEV_01)
     /* Initialize and enable PAS CO2 Wing Board I2C channel communication*/
     result = cyhal_gpio_init(MTB_PASCO2_PSEL, CYHAL_GPIO_DIR_OUTPUT, CYHAL_GPIO_DRIVE_STRONG, MTB_PASCO2_PSEL_I2C_ENABLE);
     if (result != CY_RSLT_SUCCESS)
@@ -205,7 +200,21 @@ void pasco2_task(cy_thread_arg_t arg)
     {
         CY_ASSERT(0);
     }
+#else
+    /* Initialize the LEDs on the PSoC 62 baseboard */
+    cyhal_gpio_init(CYBSP_LED_RGB_GREEN, CYHAL_GPIO_DIR_OUTPUT,
+                                     CYHAL_GPIO_DRIVE_STRONG, CYBSP_LED_STATE_OFF);
+    cyhal_gpio_init(CYBSP_LED_RGB_RED, CYHAL_GPIO_DIR_OUTPUT,
+                                     CYHAL_GPIO_DRIVE_STRONG, CYBSP_LED_STATE_OFF);
+    cyhal_gpio_init(MTB_PASCO2_LED_WARNING, CYHAL_GPIO_DIR_OUTPUT,
+                                     CYHAL_GPIO_DRIVE_STRONG, CYBSP_LED_STATE_OFF);
+    
+    /* Initialize and enable the alternative power enable pin for PASCO2 sensor */
+    cyhal_gpio_init(PASCO2_PWR_EN_ALT, CYHAL_GPIO_DIR_OUTPUT,
+                                             CYHAL_GPIO_DRIVE_STRONG, false);
+    cyhal_gpio_write(PASCO2_PWR_EN_ALT,true);
 
+#endif
     /* Delay 2s to wait for pasco2 sensor get ready */
     vTaskDelay(pdMS_TO_TICKS(PASCO2_INITIALIZATION_DELAY));
 
@@ -244,7 +253,11 @@ void pasco2_task(cy_thread_arg_t arg)
     {
         CY_ASSERT(0);
     }
+#if defined(CYSBSYSKIT_DEV_01)
     cyhal_gpio_write(CYBSP_USER_LED, false); /* USER_LED is active low */
+#else
+    cyhal_gpio_write(CYBSP_USER_LED2, false); /* USER_LED is active low */
+#endif
 
     /* Turn on status LED on PAS CO2 Wing Board to indicate normal operation */
     cyhal_gpio_write(MTB_PASCO2_LED_OK, MTB_PASCO_LED_STATE_ON);
@@ -300,6 +313,18 @@ void pasco2_task(cy_thread_arg_t arg)
                 }
 
                 printf("CO2 PPM Level: %" PRIu16 "\r\n", ppm);
+#if !defined(CYSBSYSKIT_DEV_01)
+                if (ppm<=1000)
+                {
+                    cyhal_gpio_write(CYBSP_LED_RGB_GREEN, CYBSP_LED_STATE_ON);
+                    cyhal_gpio_write(CYBSP_LED_RGB_RED, CYBSP_LED_STATE_OFF);
+                }
+                else
+                {
+                    cyhal_gpio_write(CYBSP_LED_RGB_GREEN, CYBSP_LED_STATE_OFF);
+                    cyhal_gpio_write(CYBSP_LED_RGB_RED, CYBSP_LED_STATE_ON);
+                }
+#endif
             }
         }
         else
