@@ -74,7 +74,7 @@
 #define PASCO2_INITIALIZATION_DELAY (2000)
 
 /* Delay time after each PAS CO2 readout */
-#define PASCO2_PROCESS_DELAY (1000)
+#define PASCO2_PROCESS_DELAY (1100)
 
 #define conditional_log(...)                                                   \
     if (log_internal && display_ppm)                                           \
